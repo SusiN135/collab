@@ -1,5 +1,308 @@
-<html>
-  <body>
-    <h1>devops technology</h1>
-  </body>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mini Food Delivery — Demo</title>
+  <style>
+    :root{--accent:#ff4d4f;--muted:#666;--bg:#f7f7fb}
+    *{box-sizing:border-box;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
+    body{margin:0;background:var(--bg);color:#111}
+    header{background:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 6px rgba(0,0,0,.06)}
+    .brand{display:flex;gap:10px;align-items:center}
+    .logo{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,var(--accent),#ff904d);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700}
+    .controls{display:flex;gap:10px;align-items:center}
+    .btn{padding:8px 12px;border-radius:8px;border:none;cursor:pointer;background:var(--accent);color:#fff}
+    .btn.ghost{background:transparent;color:var(--accent);border:1px solid rgba(0,0,0,.06)}
+    .container{max-width:1100px;margin:24px auto;padding:0 18px;display:grid;grid-template-columns:1fr 360px;gap:20px}
+
+    /* left column */
+    .card{background:#fff;padding:16px;border-radius:12px;box-shadow:0 6px 18px rgba(18,20,26,.04)}
+    .search{display:flex;gap:10px}
+    input.search-input{flex:1;padding:10px;border-radius:8px;border:1px solid #e6e6ee}
+    .restaurants{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+    .restaurant{padding:12px;border-radius:10px;border:1px solid #f0f0f6}
+    .restaurant h4{margin:0 0 6px}
+    .menu{margin-top:10px}
+    .menu-item{display:flex;justify-content:space-between;padding:8px 6px;border-top:1px dashed #f2f2f6}
+    .menu-item:first-child{border-top:none}
+
+    /* right column (cart) */
+    .cart-header{display:flex;justify-content:space-between;align-items:center}
+    .cart-items{margin-top:10px}
+    .cart-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f3f7}
+    .total{font-weight:700;margin-top:12px;display:flex;justify-content:space-between}
+
+    /* modal */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center}
+    .modal{background:#fff;padding:18px;border-radius:12px;min-width:320px;max-width:460px}
+
+    /* small helpers */
+    .muted{color:var(--muted);font-size:13px}
+    .pill{padding:6px 8px;border-radius:999px;background:#fbfbfe;border:1px solid #eee;font-size:13px}
+    .tracker{height:10px;background:#eee;border-radius:10px;overflow:hidden}
+    .tracker > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#ff8c42);width:0}
+
+    footer{max-width:1100px;margin:22px auto;padding:12px 18px;color:var(--muted)}
+
+    @media (max-width:880px){.container{grid-template-columns:1fr}.restaurants{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand"><div class="logo">FD</div><div><strong>FoodDash</strong><div class="muted">Demo app</div></div></div>
+    <div class="controls">
+      <div id="userArea" class="muted">Not signed in</div>
+      <button class="btn ghost" id="loginBtn">Login</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <h3 style="margin:0">Find tasty food near you</h3>
+            <div class="muted">Pick a restaurant, add items to cart & place order</div>
+          </div>
+          <div class="pill">Free delivery on orders above ₹299</div>
+        </div>
+
+        <div style="margin-top:12px;display:flex;gap:10px;align-items:center">
+          <div class="search" style="flex:1">
+            <input id="search" class="search-input" placeholder="Search restaurants or dishes" />
+            <button class="btn" id="searchBtn">Search</button>
+          </div>
+          <select id="filter" style="padding:8px;border-radius:8px;border:1px solid #eaeaf5">
+            <option value="all">All</option>
+            <option value="veg">Veg</option>
+            <option value="nonveg">Non-Veg</option>
+          </select>
+        </div>
+
+        <div class="restaurants" id="restaurants"></div>
+      </div>
+
+      <!-- Order status tracker card -->
+      <div class="card" style="margin-top:12px">
+        <h4 style="margin:0">Order status</h4>
+        <div class="muted" style="margin-top:6px">Simulated live tracker for the most recent placed order</div>
+        <div style="margin-top:12px;display:flex;gap:12px;align-items:center">
+          <div style="flex:1">
+            <div id="orderInfo" class="muted">No active orders</div>
+            <div style="margin-top:8px" class="tracker"><i id="trackerBar"></i></div>
+          </div>
+          <div style="width:110px;text-align:right"><strong id="orderEta">—</strong><div class="muted">ETA</div></div>
+        </div>
+      </div>
+    </section>
+
+    <aside>
+      <div class="card">
+        <div class="cart-header"><div><strong>Your Cart</strong><div class="muted" id="cartCount">0 items</div></div><div><button class="btn ghost" id="clearCart">Clear</button></div></div>
+        <div class="cart-items" id="cartItems" style="min-height:80px"></div>
+        <div class="total"><div>Total</div><div id="cartTotal">₹0</div></div>
+        <div style="margin-top:12px;display:flex;gap:10px"><button class="btn" id="checkout">Checkout</button><button class="btn ghost" id="continueBtn">Continue browsing</button></div>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <h4 style="margin:0">Account</h4>
+        <div class="muted" style="margin-top:8px">Login to save addresses, track orders & faster checkout</div>
+        <div style="margin-top:12px;display:flex;gap:8px"><button class="btn" id="demoLogin">Quick Login (Demo)</button><button class="btn ghost" id="logoutBtn" style="display:none">Logout</button></div>
+      </div>
+    </aside>
+  </main>
+
+  <footer>Tip: Save this file as <code>mini-food-delivery.html</code> and open it in your browser to try the demo.</footer>
+
+  <!-- Modals (hidden by default) -->
+  <div id="modalRoot" style="display:none"></div>
+
+  <script>
+    // --- Sample data (mock restaurants & menus) ---
+    const DATA = [
+      {id:1,name:'Spice Junction',tags:['north','nonveg'],rating:4.5,menu:[{id:'1-1',name:'Butter Chicken',price:199},{id:'1-2',name:'Paneer Tikka',price:159}]},
+      {id:2,name:'Green Bowl',tags:['salads','veg'],rating:4.3,menu:[{id:'2-1',name:'Quinoa Salad',price:129},{id:'2-2',name:'Veg Wrap',price:89}]},
+      {id:3,name:'Noodle House',tags:['chinese','nonveg'],rating:4.2,menu:[{id:'3-1',name:'Chow Mein',price:139},{id:'3-2',name:'Veg Manchurian',price:119}]},
+      {id:4,name:'Sweets & More',tags:['dessert','veg'],rating:4.8,menu:[{id:'4-1',name:'Gulab Jamun',price:59},{id:'4-2',name:'Rasmalai',price:69}]}
+    ];
+
+    // --- App state ---
+    const state = {user:null,cart:{},activeOrder:null};
+
+    // --- DOM refs ---
+    const restaurantsEl = document.getElementById('restaurants');
+    const cartItemsEl = document.getElementById('cartItems');
+    const cartTotalEl = document.getElementById('cartTotal');
+    const cartCountEl = document.getElementById('cartCount');
+    const userArea = document.getElementById('userArea');
+    const loginBtn = document.getElementById('loginBtn');
+    const demoLoginBtn = document.getElementById('demoLogin');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const clearCartBtn = document.getElementById('clearCart');
+    const checkoutBtn = document.getElementById('checkout');
+    const modalRoot = document.getElementById('modalRoot');
+    const trackerBar = document.getElementById('trackerBar');
+    const orderInfo = document.getElementById('orderInfo');
+    const orderEta = document.getElementById('orderEta');
+
+    // --- Render restaurants ---
+    function renderRestaurants(list){
+      restaurantsEl.innerHTML = '';
+      list.forEach(r => {
+        const el = document.createElement('div'); el.className='restaurant';
+        el.innerHTML = `<h4>${r.name} <small class="muted">★ ${r.rating}</small></h4>
+          <div class="muted">${r.tags.join(' • ')}</div>
+          <div class="menu"></div>`;
+        const menuContainer = el.querySelector('.menu');
+        r.menu.forEach(m => {
+          const mi = document.createElement('div'); mi.className='menu-item';
+          mi.innerHTML = `<div><div>${m.name}</div><div class="muted">₹${m.price}</div></div><div><button class="btn" data-add='${r.id}|${m.id}'>Add</button></div>`;
+          menuContainer.appendChild(mi);
+        });
+        restaurantsEl.appendChild(el);
+      });
+    }
+
+    // --- Cart helpers ---
+    function addToCart(restaurantId, menuItemId){
+      const key = `${restaurantId}_${menuItemId}`;
+      const r = DATA.find(x=>x.id==restaurantId);
+      const item = r.menu.find(m=>m.id==menuItemId);
+      if(!state.cart[key]) state.cart[key]={...item,qty:0,restaurant:r.name};
+      state.cart[key].qty++;
+      renderCart();
+      showToast(`${item.name} added to cart`);
+    }
+
+    function removeFromCart(key){
+      delete state.cart[key]; renderCart();
+    }
+
+    function changeQty(key, delta){
+      if(!state.cart[key]) return;
+      state.cart[key].qty += delta;
+      if(state.cart[key].qty<=0) removeFromCart(key); else renderCart();
+    }
+
+    function clearCart(){state.cart={}; renderCart();}
+
+    function renderCart(){
+      cartItemsEl.innerHTML='';
+      const keys = Object.keys(state.cart);
+      let total=0, count=0;
+      if(keys.length===0){cartItemsEl.innerHTML='<div class="muted">Cart is empty — add something tasty!</div>'}
+      keys.forEach(k=>{
+        const it = state.cart[k];
+        const row = document.createElement('div'); row.className='cart-row';
+        row.innerHTML = `<div style="flex:1"><strong>${it.name}</strong><div class="muted">${it.restaurant}</div></div>
+          <div style="text-align:right">₹${it.price} x ${it.qty}<div style="margin-top:6px"><button class='btn ghost' data-dec='${k}'>-</button> <button class='btn' data-inc='${k}'>+</button> <button class='btn ghost' data-rem='${k}'>Remove</button></div></div>`;
+        cartItemsEl.appendChild(row);
+        total += it.price*it.qty; count += it.qty;
+      });
+      cartTotalEl.textContent = `₹${total}`;
+      cartCountEl.textContent = `${count} items`;
+    }
+
+    // --- Simple toasts ---
+    function showToast(msg){
+      const t = document.createElement('div'); t.className='modal-backdrop';
+      const box = document.createElement('div'); box.className='modal'; box.style.maxWidth='260px'; box.innerHTML=`<div style="font-weight:600">${msg}</div>`;
+      t.appendChild(box); document.body.appendChild(t);
+      setTimeout(()=>t.remove(),900);
+    }
+
+    // --- Modal helpers ---
+    function openModal(content){ modalRoot.innerHTML = `<div class="modal-backdrop">${content}</div>`; modalRoot.style.display='block'; }
+    function closeModal(){ modalRoot.innerHTML=''; modalRoot.style.display='none'; }
+
+    // --- Login flow (demo) ---
+    function doLogin(name="Demo User"){ state.user={name}; userArea.textContent = name; loginBtn.style.display='none'; logoutBtn.style.display='inline-block'; demoLoginBtn.style.display='none'; showToast('Logged in as '+name); }
+    function doLogout(){ state.user=null; userArea.textContent='Not signed in'; loginBtn.style.display='inline-block'; logoutBtn.style.display='none'; demoLoginBtn.style.display='inline-block'; showToast('Logged out'); }
+
+    // --- Checkout & order simulation ---
+    function checkout(){
+      if(Object.keys(state.cart).length===0){ showToast('Cart empty — add items first'); return; }
+      if(!state.user){
+        // prompt login modal
+        openModal(`<div class="modal"><h3>Login required</h3><div class="muted">Please login to place order</div><div style="margin-top:12px;display:flex;justify-content:flex-end;gap:8px"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn" onclick="demoSignIn()">Quick Login</button></div></div>`);
+        return;
+      }
+      // Place fake order
+      const orderId = 'ORD'+Math.floor(Math.random()*90000+10000);
+      const total = Object.values(state.cart).reduce((s,i)=>s+i.price*i.qty,0);
+      state.activeOrder = {id:orderId,total,progress:0,placedAt:Date.now()};
+      closeModal(); clearCart(); renderCart(); startTracker(); showToast('Order placed — '+orderId);
+    }
+
+    function demoSignIn(){ doLogin(); closeModal(); }
+
+    // --- Tracker simulation ---
+    let trackerTimer=null;
+    function startTracker(){
+      if(!state.activeOrder) return;
+      orderInfo.textContent = `Order ${state.activeOrder.id} — Preparing`;
+      orderEta.textContent = '30-40 min';
+      state.activeOrder.progress = 5; updateTrackerBar();
+      if(trackerTimer) clearInterval(trackerTimer);
+      trackerTimer = setInterval(()=>{
+        if(!state.activeOrder) { clearInterval(trackerTimer); return; }
+        state.activeOrder.progress += Math.floor(Math.random()*10+5);
+        if(state.activeOrder.progress>=100){ state.activeOrder.progress=100; orderInfo.textContent = `Order ${state.activeOrder.id} — Delivered`; orderEta.textContent = '0 min'; updateTrackerBar(); clearInterval(trackerTimer); state.activeOrder=null; setTimeout(()=>{ orderInfo.textContent='No active orders'; trackerBar.style.width='0'; orderEta.textContent='—'; },4000); return; }
+        if(state.activeOrder.progress<30) orderInfo.textContent = `Order ${state.activeOrder.id} — Preparing`;
+        else if(state.activeOrder.progress<70) orderInfo.textContent = `Order ${state.activeOrder.id} — Out for delivery`;
+        else orderInfo.textContent = `Order ${state.activeOrder.id} — Near you`;
+        orderEta.textContent = `${40 - Math.floor(state.activeOrder.progress/2)} min`;
+        updateTrackerBar();
+      },2500);
+    }
+
+    function updateTrackerBar(){ trackerBar.style.width = (state.activeOrder? state.activeOrder.progress : 0) + '%' }
+
+    // --- Initial render ---
+    renderRestaurants(DATA); renderCart();
+
+    // --- Event delegation for add buttons ---
+    restaurantsEl.addEventListener('click', e => {
+      const add = e.target.closest('[data-add]'); if(add){ const [rid,mid]=add.dataset.add.split('|'); addToCart(Number(rid), mid); }
+    });
+
+    // --- Cart clicks (inc/dec/remove) ---
+    cartItemsEl.addEventListener('click', e=>{
+      const inc = e.target.closest('[data-inc]'); const dec = e.target.closest('[data-dec]'); const rem = e.target.closest('[data-rem]');
+      if(inc) changeQty(inc.dataset.inc, +1);
+      if(dec) changeQty(dec.dataset.dec, -1);
+      if(rem) removeFromCart(rem.dataset.rem);
+    });
+
+    // --- Buttons ---
+    loginBtn.addEventListener('click', ()=>{
+      openModal(`<div class="modal"><h3>Sign in</h3>
+        <div style="margin-top:10px"><input id='nm' placeholder='Your name' style='width:100%;padding:8px;border-radius:8px;border:1px solid #eee' /></div>
+        <div style="margin-top:12px;display:flex;justify-content:flex-end;gap:8px"><button class='btn ghost' onclick='closeModal()'>Cancel</button><button class='btn' onclick='manualLogin()'>Sign in</button></div></div>`);
+    });
+
+    demoLoginBtn.addEventListener('click', ()=>doLogin());
+    logoutBtn.addEventListener('click', ()=>doLogout());
+    clearCartBtn.addEventListener('click', clearCart);
+    checkoutBtn.addEventListener('click', checkout);
+
+    // search
+    document.getElementById('searchBtn').addEventListener('click', ()=>{
+      const q = document.getElementById('search').value.trim().toLowerCase(); const f = document.getElementById('filter').value;
+      let list = DATA.filter(r=> r.name.toLowerCase().includes(q) || r.menu.some(m=>m.name.toLowerCase().includes(q)) );
+      if(f==='veg') list = list.filter(r=> r.tags.includes('veg'));
+      if(f==='nonveg') list = list.filter(r=> r.tags.includes('nonveg'));
+      renderRestaurants(list.length?list:DATA);
+    });
+
+    // expose helpers for inline onClick
+    window.closeModal = closeModal; window.manualLogin = function(){ const name = document.getElementById('nm').value.trim() || 'Guest'; doLogin(name); closeModal(); }
+    window.demoSignIn = demoSignIn;
+
+    // keyboard shortcuts: press "o" to simulate order progress step (dev friendly)
+    window.addEventListener('keydown', e=>{ if(e.key==='o'){ if(state.activeOrder) { state.activeOrder.progress += 15; updateTrackerBar(); } } });
+
+  </script>
+</body>
 </html>
